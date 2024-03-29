@@ -5,42 +5,90 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
+use function PHPUnit\Framework\isNull;
+
 class AircraftAirportsController extends Controller
 {
     /**
-     * ручка    /api/aircraft_airports
+     * ручка:
+     * /api/aircraft_airports
+     * 
+     * Параметры:
+     * tail - бортовой номер воздушного судна
+     * date_from - начало периода (формат: yyyy-mm-dd hh:mm )
+     * date_to - конец периода (формат: yyyy-mm-dd hh:mm )
+     * 
+     * 
+     * Поля ответа
+     *  airport_id              - id аэропорта
+     *  code_iata               - код IATA аэропорта
+     *  code_icao               - код ICAO аэропорта
+     * 
+     *  flights.takeoff         - времени вылета из этого аэропорта     / вылет
+     *  flights.landing         - времени посадки в этот аэропорт       / прилет
+     * 
+     *  flights.cargo_offload   - объёма разгрузки в этом аэропорту
+     *  flights.cargo_load      - объёма загрузки в этом аэропорту
      */
     public function index()
     {
 
         # параметры
         #
-        $tail       =   'TEST-001' ;    // - бортовой номер воздушного судна
-        $date_from  =   '';             // - начало периода (формат: yyyy-mm-dd hh:mm )     flights.takeoff
-        $date_to    =   '';             // - конец периода (формат: yyyy-mm-dd hh:mm )      flights.landing
+        $validated  =   request()->validate([
+            'tail'      => 'required|string',
+            'date_from' => 'required|date',
+            'date_to'   => 'required|date',
+        ]);
+        #
+        #
+        # не валидные данные
+        #
+        if (
+                $validated['tail'] === null
+            ||  $validated['date_from'] === null
+            ||  $validated['date_to'] === null
+        ) {
+            // dd($validated);
+            // return response()->json(['error'=>'invalid_params']);
+        }
 
 
 
         # получить данные из базы
         #
-        $select     = DB::select("
+        $select     =   DB::select("
             SELECT
-                 flights.*
-                , airfrom.code_iata     as  airfrom_code_iata
-                , airto.code_iata       as  airto_code_iata
+                  aircrafts.tail
+                , airto.id            as  airport_id
+                , airto.code_iata     as  code_iata
+                , airto.code_icao     as  code_icao
+                
+                , flights.takeoff
+                , flights.landing
+                , flights.cargo_offload
+                , flights.cargo_load
+                
             FROM
                 flights
-                    INNER JOIN  aircrafts               ON  flights.aircraft_id = aircrafts.id
-                    INNER JOIN  airports as airfrom     ON  flights.airport_id1 = airfrom.id
-                    INNER JOIN  airports as airto       ON  flights.airport_id2 = airto.id
-            WHERE
-                aircrafts.tail = '$tail'
-            LIMIT
-                1
-        ");
+                    JOIN  aircrafts               ON  flights.aircraft_id = aircrafts.id
+                    JOIN  airports as airto       ON  flights.airport_id2 = airto.id
 
-        // dd($select);
+                    -- не понял нейминг flights.airport_id1 , flights.airport_id2
+                    -- но добавить в выдачу результыты из другой таблицы - не проблема
+                    -- JOIN  airports as airfrom     ON  flights.airport_id1 = airfrom.id
+            WHERE
+                aircrafts.tail          =    :tail
+                AND flights.takeoff     >=   :date_from
+                AND flights.landing     <=   :date_to
+            ",
+            $validated
+        );
         
+
+
+        # отдать данные
+        #
         return response()->json($select);
     }
 
