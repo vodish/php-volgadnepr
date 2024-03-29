@@ -1,6 +1,8 @@
 # laravel-volga-dnepr
 
 Задача: сделать ручку
+https://github.com/vodish/php-volgadnepr/blob/main/README.pdf
+
 
 http://php-volgadnepr/api/aircraft_airports
 
