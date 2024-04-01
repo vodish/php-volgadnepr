@@ -64,12 +64,8 @@ class AircraftAirportsController extends Controller
                     
             WHERE
                 aircrafts.tail  =   :tail
-
                 -- судно находилось в заданное время в аэропорте назначения (airto)
-                AND  (
-                    flights.landing  BETWEEN  :date_from   AND  :date_to
-                OR  flights.takeoff  BETWEEN  :date_from   AND  :date_to
-                )
+                flights.landing  BETWEEN  :date_from   AND  :date_to
             ",
             $validated
         );
